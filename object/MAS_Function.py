@@ -25,6 +25,7 @@ Algorithm_1(x, y, alpha)            收敛方法 MWMS-S
 Algorithm_2(x, y, alpha)            收敛方法 MWMS-J
 """
 
+# 1235v27v3qu6 rytw
 
 def distance(x):  # 计算两点之间距离
     distances = np.sqrt((x[:, np.newaxis] - x) ** 2)
