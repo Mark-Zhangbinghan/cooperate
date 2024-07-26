@@ -1,7 +1,7 @@
 import sys  # 用于程序直接退出
 import general_mindir as gm     # mindir模型读取通用代码（目前只支持读入图片）
 import image_pred_onnx as image_pred
-import emotion_analyse_onnx as emotion_analyse
+#import emotion_analyse_onnx as emotion_analyse
 
 # 用来获取模型的类型
 def get_model_type(model_path):
