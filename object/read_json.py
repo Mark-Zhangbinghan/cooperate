@@ -92,15 +92,17 @@ def read_json(data):
                         value_tabel.append(api.api_check(n, value))
 
                 theta, x = dp.distributed_differential_privacy(theta, x, h, D, A, S, c, q, num_iterations)
+                theta = np.resize(theta, len(value_tabel))
+                x = np.resize(x, len(value_tabel))
 
-                # 利用 theta 和 x 来调整 value_table
+                # 利用 theta 和 x 来调整 value_tabel
                 for i in range(len(value_tabel)):
                     if isinstance(value_tabel[i], np.ndarray) and value_tabel[i].shape == ():
-                        value_tabel[i] = value_tabel[i] + theta[i % num_agents] + x[i % num_agents]
+                        value_tabel[i] = value_tabel[i] + theta[i] + x[i]
                     elif isinstance(value_tabel[i], (int, float)):
-                        value_tabel[i] = value_tabel[i] + theta[i % num_agents] + x[i % num_agents]
+                        value_tabel[i] = value_tabel[i] + theta[i] + x[i]
                     else:
-                        raise ValueError(f"Unsupported value type or shape for value_table[{i}]")
+                        raise ValueError(f"Unsupported value type or shape for value_tabel[{i}]")
 
                 value = MAS_Function.change_value(value_tabel, weight_matrix)
 
