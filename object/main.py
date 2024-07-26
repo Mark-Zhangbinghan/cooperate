@@ -22,3 +22,4 @@ if __name__ == "__main__":
     with open(file_path, 'r', encoding='utf-8') as file:  # 这里打开模型返回的json文件，并寻找其中的关键字
         data = json.load(file)
     value = read_json(data)
+
