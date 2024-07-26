@@ -53,8 +53,11 @@ def read_json(data):
         else:
             value = data["content"]  # 文字直接读取即可
             in_type = 0  # 输入是文字
-        num_agents = sum([len(layer_data["models"]) for layer_data in data["modelList"]])
-        theta, x, D, A, S, c, q, h, num_iterations = dp.initialize_parameters(num_agents)
+
+        # 初始计算所有模型的总数量
+        # total_num_agents = sum([len(layer_data["models"]) for layer_data in data["modelList"]])
+        # theta, x, D, A, S, c, q, h, num_iterations = dp.initialize_parameters(total_num_agents)
+
         for layer_data in data["modelList"]:
             # 判断串并行条件
             if layer_data["parallel"] == 0:
@@ -66,32 +69,41 @@ def read_json(data):
                         model_path = download.download_file(bucket_name, object_key, local_folder, ENDPOINT, AK, SK)
                         # 在函数内部判断模型是mindir还是onnx
                         value = judge.get_value(model["modelName"], model_path, value, in_type)
-                    else:   # 模型调用大模型
+                    else:  # 模型调用大模型
                         n = switcher.get(model["modelName"])
                         value = api.api_check(n, value)
             else:
-                print("并行")                # 目前只支持文字输出
-                value_tabel = []            # 用来接收所有输出
-                weight_matrix = []          # 设置权重矩阵
+                print("并行")  # 目前只支持文字输出
+                value_tabel = []  # 用来接收所有输出
+                weight_matrix = []  # 设置权重矩阵
+
+                # 重新计算并行层中的模型数量
+                num_agents = len(layer_data["models"])
+                theta, x, D, A, S, c, q, h, num_iterations = dp.initialize_parameters(num_agents)
+
                 for model in layer_data["models"]:
                     weight_matrix.append(model["weight"])
                     # 判断模型是本地还是调用大模型
                     if model["isAPI"] == 0:  # 模型为本地
                         model_path = download.download_file(bucket_name, object_key, local_folder, ENDPOINT, AK, SK)
                         value_tabel.append(judge.get_value(model["modelName"], model_path, value, in_type))
-                    else:   # 模型调用大模型
+                    else:  # 模型调用大模型
                         n = switcher.get(model["modelName"])
                         value_tabel.append(api.api_check(n, value))
+
                 theta, x = dp.distributed_differential_privacy(theta, x, h, D, A, S, c, q, num_iterations)
+
                 # 利用 theta 和 x 来调整 value_table
                 for i in range(len(value_tabel)):
                     if isinstance(value_tabel[i], np.ndarray) and value_tabel[i].shape == ():
-                        value_tabel[i] = value_tabel[i] + theta[i] + x[i]
+                        value_tabel[i] = value_tabel[i] + theta[i % num_agents] + x[i % num_agents]
                     elif isinstance(value_tabel[i], (int, float)):
-                        value_tabel[i] = value_tabel[i] + theta[i] + x[i]
+                        value_tabel[i] = value_tabel[i] + theta[i % num_agents] + x[i % num_agents]
                     else:
                         raise ValueError(f"Unsupported value type or shape for value_table[{i}]")
+
                 value = MAS_Function.change_value(value_tabel, weight_matrix)
+
     except Exception as e:
         print("错误类型：", type(e).__name__)
         print("错误信息：", str(e))
